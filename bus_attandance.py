@@ -40,7 +40,7 @@ def Check():
 			db.child("NEXUS").child("attandanceList").child(d).child(a).child("am").set(1)
 			pass
 		if t > 12:
-			db.child("NEXUS").child("attandanceList").child(a).child("pm").set(1)
+			db.child("NEXUS").child("attandanceList").child(d).child(a).child("pm").set(1)
 			pass
 		pass
 	pass
