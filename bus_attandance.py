@@ -1,25 +1,80 @@
+#!/usr/bin/python3
 import pyrebase
 import serial
+import lcddriver
+from time import *
+lcd = lcddriver.lcd()
+rf = serial.Serial('/dev/ttyUSB0')
+busRoute = "thrissur-chlkara"
+dir = "up"
 import datetime
 now = datetime.datetime.now()
+
 #Firebase Configuration
 config = {
-  "apiKey":"AIzaSyBeTkzdsVpcKpZkU9BMzNwCloUlNf2MWAo",
-  "authDomain": "akshaypradheepdc.firebaseapp.com",
-  "databaseURL": "https://akshaypradheepdc.firebaseio.com",
-  "storageBucket": "akshaypradheepdc.appspot.com"
+  "apiKey":"AIzaSyDk7u7EP1vx4Rp1WGckMr_ouWQXT0ity6Q",
+  "authDomain": "ksrtc-d07e0.firebaseapp.com",
+  "databaseURL": "https://ksrtc-d07e0.firebaseio.com",
+  "storageBucket": "ksrtc-d07e0.appspot.com"
 }
-
 
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
-rf = serial.Serial('/dev/ttyUSB0')
+#-------------------------------------------------------------
+def fireRead(barcod):
+	_name = db.child("Name").child(barcod).get()
+	_route = db.child("Route").child(barcod).get()
+	return _name.val(), _route.val()
 
 def inRead():
-	_a = rf.read(12)
-	_b = _a.decode('utf-8')
+	a = rf.read(12)
+	y = a.decode('utf-8')
+	print(y)
 	#a = input("enter the user ID:")
-	return _b
+	return y
+def pchek(barcod):
+    _v = db.child("userAadhar").child(barcod).get()
+    v = _v.val()
+    print("AADHAR NO " + v)
+    _ts = db.child("validity").child(v).child("expiry").get()
+    ts = _ts.val()
+    if ts is None:
+        return "01/01/0001"
+    else:
+        print("validity " + ts)
+        return(ts)
+
+def checkval(ti):
+    a = ti[0]
+    a = a + ti[1]
+    b = ti[3]
+    b = ti[4]
+    c = ti[6]
+    c = c + ti[7]
+    c = c + ti[8]
+    c = c + ti[9]
+    print(a)
+    print(b)
+    print(c)
+    a = int(a)
+    b = int(b)
+    c = int(c)
+    _a = now.day
+    _b = now.month
+    _c = now.year
+    exp = datetime.datetime(c,b,a)
+    _now = datetime.datetime(_c,_b,_a)
+    if(exp>_now):
+        return "ok"
+        pass
+    else:
+        return None
+        
+def display(name,route):
+        lcd.lcd_clear()
+        lcd.lcd_display_string(name,1)
+        lcd.lcd_display_string(route,2)
+	
 
 def timeStamp():
 	import datetime
@@ -28,29 +83,34 @@ def timeStamp():
 	return a 
 	pass
 
-def Check():
-	print("WAITING FOR RF ID")
-	a = inRead()
-	_reg = db.child("NEXUS").child("userList").child(a).get()
-	reg = _reg.val()
-	d = timeStamp()
-	t = now.hour
-	if reg == "True":
-		if t < 12:
-			db.child("NEXUS").child("attandanceList").child(d).child(a).child("am").set(1)
+def mark(_usr):
+		_us = str(_usr)
+		a = db.child("date").child(_us).child(timeStamp()).child(busRoute).child(dir).get()
+		_a = a.val()
+		print(_a)
+		if _a == "1":
+			return "not allowed"
 			pass
-		if t > 12:
-			db.child("NEXUS").child("attandanceList").child(d).child(a).child("pm").set(1)
-			pass
-		pass
-	pass
+		else:	
+			db.child("date").child(_usr).child(timeStamp()).child(busRoute).child(dir).set("1")
+			return "Marked"
 
-def mark():
-	print("WAITING FOR RF ID")
-	a = inRead()
-	print(a)
-	db.child("NEXUS").child("userList").child(a).set("True")
-
+#--------------------------------------------------------------
 while True:
-	Check()
-	pass
+	_u = inRead()
+	bx = pchek(_u)
+	
+	c = checkval(bx)
+	a,b = fireRead(_u)
+	if a is None or c is None:
+		display("not allowed","not registered")
+	else:
+		display(a,b)
+		_x = mark(_u)
+		sleep(1.5)
+		lcd.lcd_clear()
+		lcd.lcd_display_string("      KSRTC", 1)
+		lcd.lcd_display_string(_x, 2)
+		
+		pass
+
